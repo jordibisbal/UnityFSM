@@ -1,14 +1,32 @@
 using UnityEngine;
 using UnityEngine.Events;
 using System.Collections.Generic;
+using System.Collections;
 using System.Text.RegularExpressions;
+
+struct DelayedEvent {
+    public string eventName;
+    public object message;
+    public GameObject target;
+    public float when;
+
+    public DelayedEvent(string eventName, object message, GameObject target, float when) {
+        this.eventName = eventName;
+        this.message = message;
+        this.target = target;
+        this.when = when;
+    }
+}
 
 /// <summary>
 /// Dispatch messages to subcribers, by broadcasting to the subscribers o by delivering just to one of them
 /// For targeted events "@", the name, and the instance id of the target is add to the  event name
 /// </summary>
 public class EventManager : MonoBehaviour {
-
+    
+    /// <summary>
+    /// Messages that EventManager can send by itself
+    /// </summary>
     public const string update = "EventManager.update";
     public const string allwaysUpdate = "EventManager.allwaysUpdate";
 
@@ -32,6 +50,8 @@ public class EventManager : MonoBehaviour {
     /// </summary>
     private static EventManager eventManagerSingleton;
 
+    private ArrayList delayedEvents = new ArrayList();
+
     /// <summary>
     /// Get the singleton
     /// </summary>
@@ -46,13 +66,13 @@ public class EventManager : MonoBehaviour {
                     }
 
                     if (eventManagerSingleton) {
-                        Debug.LogError("Must be only one default EventManger in the active scene.");
+                        Debug.LogError("Must be only one default EventManger");
                     }
                     eventManagerSingleton = FindObjectOfType(typeof(EventManager)) as EventManager;
                 }               
 
                 if (!eventManagerSingleton) {
-                    Debug.LogError("Must be one default EventManger (in a GameObject) in the active scene.");
+                    Debug.LogError("Must be one default EventManger (in a GameObject)");
                 }
             }
 
@@ -61,7 +81,8 @@ public class EventManager : MonoBehaviour {
     }
 
     /// <summary>
-    /// Attacht a callback to eventName
+    /// Attaches a callback to eventName, ei. starts listening for eventName.
+    /// If a target is specified, then just targeted events will be received, if no target is specified, targeted events will not be attached (received).
     /// </summary>
     /// <param name="eventName">The event name</param>
     /// <param name="listener">The callback yo be called</param>
@@ -87,6 +108,13 @@ public class EventManager : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// Deataches the given listener to eventName event.
+    /// If a target is specified, then just targeted events will be deattached, if no target is specified, targeted events will not be deattached.
+    /// </summary>
+    /// <param name="eventName"></param>
+    /// <param name="listener"></param>
+    /// <param name="target"></param>
     public static void StopListening(string eventName, UnityAction<object> listener, GameObject target = null) {
         if (eventManagerSingleton == null) return;
 
@@ -100,6 +128,10 @@ public class EventManager : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// Deattaches all events (targeted or not) at wich listener is attached
+    /// </summary>
+    /// <param name="listener"></param>
     public static void StopListening(UnityAction<object> listener) {
         if (eventManagerSingleton == null) return;
 
@@ -108,10 +140,12 @@ public class EventManager : MonoBehaviour {
         }
     }
 
-    private static void TriggerEventNoNameCheck(string eventName, object message) {
-
-    }
-
+    /// <summary>
+    /// Sends the message to all attached listeners
+    /// </summary>
+    /// <param name="eventName"></param>
+    /// <param name="message"></param>
+    /// <param name="target"></param>
     public static void TriggerEvent(string eventName, object message, GameObject target = null) {
         assertEventNameIsValid(eventName);
 
@@ -127,6 +161,23 @@ public class EventManager : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// Sends a message after some amount of time, that is done on allwaysUpdate loop, so the precision is tge one of that. 
+    /// </summary>
+    /// <param name="time">Sends the message after time seconds</param>
+    /// <param name="eventName"></param>
+    /// <param name="message"></param>
+    /// <param name="target"></param>
+    public static void TriggerEventAfter(float time, string eventName, object message, GameObject target = null) {        
+        getSingleton.delayedEvents.Add(new DelayedEvent(eventName, message, target, Time.realtimeSinceStartup + time));
+    }
+
+    /// <summary>
+    /// Calculates the targeted event name for an event
+    /// </summary>
+    /// <param name="eventName"></param>
+    /// <param name="target"></param>
+    /// <returns></returns>
     private static string targetedEventName(string eventName, GameObject target) {
         if (!target) {
 
@@ -135,6 +186,10 @@ public class EventManager : MonoBehaviour {
         return "{eventName}@{target.name} ({target.GetInstanceID()})";
     }
 
+    /// <summary>
+    /// Checks if the eventName is valid or nor
+    /// </summary>
+    /// <param name="eventName"></param>
     private static void assertEventNameIsValid(string eventName) {
         // Fucked bastards !!! Another regex dialect ? Really ??? :(
         if (! (new Regex(@"^[\w./]+$").IsMatch(eventName))) {
@@ -142,17 +197,26 @@ public class EventManager : MonoBehaviour {
         };
     }
 
+    /// <summary>
+    /// Sends a tick messatge to listners subscribed to EventManager.update
+    /// </summary>
     private void Update() {
-        if (this == getSingleton) {
-            TriggerEvent(EventManager.update, null);
-        }
+        TriggerEvent(EventManager.update, null);
     }
 
+    /// <summary>
+    /// Sends a tick messatge to listners subscribed to EventManager.allwaysUpdate
+    /// </summary>
     private void AllwaysUpdate() {
-        if (this == getSingleton) {
-            TriggerEvent(EventManager.allwaysUpdate, null);
+        TriggerEvent(EventManager.allwaysUpdate, null);
+
+        float now = Time.realtimeSinceStartup;
+
+        foreach (DelayedEvent theEvent in delayedEvents) {
+            if (theEvent.when >= now) {
+                TriggerEvent(theEvent.eventName, theEvent.message, theEvent.target);
+                delayedEvents.Remove(theEvent);
+            }
         }
     }
-
-
 }
