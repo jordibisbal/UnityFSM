@@ -6,13 +6,13 @@ using Guard = System.Func<bool>;
 class State {
     private string myName;
     private Action myOnArrive;
-    private Action<float> myOnUpdate;
+    private Action myOnUpdate;
 
     public string name { get { return myName; } }
     public Action onArrive { get { return myOnArrive; } }
-    public Action<float> onUpdate { get { return myOnUpdate;  } }
+    public Action onUpdate { get { return myOnUpdate;  } }
 
-    public State(string name, Action onArrive, Action<float> onUpdate) {
+    public State(string name, Action onArrive, Action onUpdate) {
         this.myName = name;
         this.myOnArrive = onArrive;
         this.myOnUpdate = onUpdate;
@@ -73,6 +73,8 @@ public sealed class FiniteStateMachine {
     /// </summary>
     private bool ignoreUnkownAction;
 
+    private bool subscribedToUpdate = false;
+
     /// <summary>
     /// Constructs the state machine.
     /// 
@@ -86,13 +88,31 @@ public sealed class FiniteStateMachine {
     }
 
     /// <summary>
+    /// Destructor
+    /// </summary>
+    ~FiniteStateMachine() {
+        if (subscribedToUpdate) {
+            EventManager.StopListening(EventManager.update, OnUpdate);
+        }
+    }
+
+    /// <summary>
+    /// Return true is the current state has the given name, if not initialized, returns false
+    /// </summary>
+    /// <param name="stateName"></param>
+    /// <returns></returns>
+    public bool isState(string stateName) {
+        return (myState != null) && (myState.name == stateName);
+    }
+
+    /// <summary>
     /// Initializes the state, can be called just once (when the state machine has no state)
     /// </summary>
     /// <param name="newState"></param>
     /// <returns></returns>
     public FiniteStateMachine initialize(string stateName) {
         myState = getState(stateName);
-    
+
         return this;
     }
     
@@ -167,10 +187,15 @@ public sealed class FiniteStateMachine {
     /// <param name="name">State name</param>
     /// <param name="onArrive">Callback to be called when the state is set</param>
     /// <returns>Fluent interface</returns>
-    public FiniteStateMachine addState(string name, Action onArrive = null, Action<float> onUpdate = null) {
+    public FiniteStateMachine addState(string name, Action onArrive = null, Action onUpdate = null) {
 
         if (states.ContainsKey(name)) {
             throw new StateAlreadyExistsException("State " + name + " already exists");
+        }
+
+        if ((onUpdate != null) && ! subscribedToUpdate) {
+            EventManager.StartListening(EventManager.update, OnUpdate);
+            subscribedToUpdate = true;
         }
         states.Add(name, new State(name, onArrive, onUpdate));
 
@@ -305,9 +330,9 @@ public sealed class FiniteStateMachine {
     /// Execute the delegate for the current (in progress) transition if any
     /// </summary>
     /// <param name="deltaTime">The deltaTime to be passed to the delegate</param>
-    public void Update (float deltaTime) {
+    public void OnUpdate (object message) {
         if (myState != null && myState.onUpdate != null) {
-            myState.onUpdate(deltaTime);
+            myState.onUpdate();
         }	    
 	}
 }
