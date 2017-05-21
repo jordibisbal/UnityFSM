@@ -3,6 +3,7 @@ using UnityEngine.Events;
 using System.Collections.Generic;
 using System.Collections;
 using System.Text.RegularExpressions;
+using System;
 
 struct DelayedEvent {
     public string eventName;
@@ -18,12 +19,26 @@ struct DelayedEvent {
     }
 }
 
+struct OwnedListener {
+    public UnityEngine.Object owner;
+    public UnityAction<object> listener;
+    public string eventName;
+    public GameObject target;
+
+    public OwnedListener(UnityEngine.Object owner, UnityAction<object> listener, string eventName, GameObject target) {
+        this.owner     = owner;
+        this.listener  = listener;
+        this.eventName = eventName;
+        this.target    = target;
+    }
+}
+
 /// <summary>
 /// Dispatch messages to subcribers, by broadcasting to the subscribers o by delivering just to one of them
 /// For targeted events "@", the name, and the instance id of the target is add to the  event name
 /// </summary>
 public class EventManager : MonoBehaviour {
-    
+
     /// <summary>
     /// Messages that EventManager can send by itself
     /// </summary>
@@ -50,6 +65,14 @@ public class EventManager : MonoBehaviour {
     /// </summary>
     private static EventManager eventManagerSingleton;
 
+    /// <summary>
+    /// Subscribers list
+    /// </summary>
+    private Dictionary<string, ArrayList> subscribers = new Dictionary<string, ArrayList>();
+
+    /// <summary>
+    /// Delayed events
+    /// </summary>
     private ArrayList delayedEvents = new ArrayList();
 
     /// <summary>
@@ -59,9 +82,9 @@ public class EventManager : MonoBehaviour {
         get {
             if (!eventManagerSingleton) {
                 EventManager[] eventManagers = FindObjectsOfType(typeof(EventManager)) as EventManager[];
-                
+
                 foreach (EventManager eventManager in eventManagers) {
-                    if (! eventManager.defaultEventManager) {
+                    if (!eventManager.defaultEventManager) {
                         continue;
                     }
 
@@ -69,7 +92,7 @@ public class EventManager : MonoBehaviour {
                         Debug.LogError("Must be only one default EventManger");
                     }
                     eventManagerSingleton = FindObjectOfType(typeof(EventManager)) as EventManager;
-                }               
+                }
 
                 if (!eventManagerSingleton) {
                     Debug.LogError("Must be one default EventManger (in a GameObject)");
@@ -80,13 +103,44 @@ public class EventManager : MonoBehaviour {
         }
     }
 
+
+    public static void StartListening(UnityEngine.Object subscriber, string eventName, UnityAction<object> listener, GameObject target = null) {
+        EventManager singleton = getSingleton;
+        string key = "" + subscriber.GetInstanceID();
+
+        if (! singleton.subscribers.ContainsKey(key)) {
+            singleton.subscribers.Add(key, new ArrayList());
+        }
+        ArrayList namedEvents;
+        singleton.subscribers.TryGetValue(key, out namedEvents);
+        namedEvents.Add(new OwnedListener(subscriber, listener, eventName, target));
+
+        StartListening(eventName, listener, target);
+    }
+
+    public static void StopListening(UnityEngine.Object subscriber) {
+        EventManager singleton = getSingleton;
+        string key = "" + subscriber.GetInstanceID();
+
+        if (! singleton.subscribers.ContainsKey(key)) {
+            return;
+        }
+
+        ArrayList ownedEvents;
+        singleton.subscribers.TryGetValue(key, out ownedEvents);
+        foreach (OwnedListener ownedListener in ownedEvents) {
+            StopListening(ownedListener.eventName, ownedListener.listener, ownedListener.target);            
+        }
+        singleton.subscribers.Remove(key);
+    }
+
     /// <summary>
     /// Attaches a callback to eventName, ei. starts listening for eventName.
     /// If a target is specified, then just targeted events will be received, if no target is specified, targeted events will not be attached (received).
     /// </summary>
     /// <param name="eventName">The event name</param>
     /// <param name="listener">The callback yo be called</param>
-    /// <param name="target">If set, the </param>
+    /// <param name="target">If set, the </param>    
     public static void StartListening(string eventName, UnityAction<object> listener, GameObject target = null) {
         ParametrizedEvent thisEvent = null;
 
@@ -95,7 +149,7 @@ public class EventManager : MonoBehaviour {
         eventName = targetedEventName(eventName, target);
 
         if (getSingleton.eventDictionary.TryGetValue(eventName, out thisEvent)) {
-             thisEvent.AddListener(listener);
+            thisEvent.AddListener(listener);
         }
         else {
             thisEvent = new ParametrizedEvent();
@@ -135,7 +189,7 @@ public class EventManager : MonoBehaviour {
     public static void StopListening(UnityAction<object> listener) {
         if (eventManagerSingleton == null) return;
 
-        foreach (KeyValuePair<string, ParametrizedEvent> thisEvent in getSingleton.eventDictionary ) {
+        foreach (KeyValuePair<string, ParametrizedEvent> thisEvent in getSingleton.eventDictionary) {
             thisEvent.Value.RemoveListener(listener);
         }
     }
@@ -168,7 +222,7 @@ public class EventManager : MonoBehaviour {
     /// <param name="eventName"></param>
     /// <param name="message"></param>
     /// <param name="target"></param>
-    public static void TriggerEventAfter(float time, string eventName, object message, GameObject target = null) {        
+    public static void TriggerEventAfter(float time, string eventName, object message, GameObject target = null) {
         getSingleton.delayedEvents.Add(new DelayedEvent(eventName, message, target, Time.realtimeSinceStartup + time));
     }
 
@@ -183,7 +237,7 @@ public class EventManager : MonoBehaviour {
 
             return eventName;
         }
-        return "{eventName}@{target.name} ({target.GetInstanceID()})";
+        return eventName + "@" + target.name + "(" + target.GetInstanceID() + ")";
     }
 
     /// <summary>
@@ -192,7 +246,7 @@ public class EventManager : MonoBehaviour {
     /// <param name="eventName"></param>
     private static void assertEventNameIsValid(string eventName) {
         // Fucked bastards !!! Another regex dialect ? Really ??? :(
-        if (! (new Regex(@"^[\w./]+$").IsMatch(eventName))) {
+        if (!(new Regex(@"^[\w./]+$").IsMatch(eventName))) {
             throw new InvalidEventNameException(eventName);
         };
     }

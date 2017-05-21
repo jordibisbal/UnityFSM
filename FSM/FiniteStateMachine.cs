@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using UnityEngine;
 
 using Guard = System.Func<bool>;
 
@@ -36,6 +37,11 @@ public sealed class FiniteStateMachine {
             return myState.name;
         }
     }
+
+    /// <summary>
+    /// Debug actions and states
+    /// </summary>
+    public bool debug = false;
 
     /// <summary>
     /// Dictionary with valid states and actions to be called once we the states are reached
@@ -112,6 +118,9 @@ public sealed class FiniteStateMachine {
     /// <returns></returns>
     public FiniteStateMachine initialize(string stateName) {
         myState = getState(stateName);
+        if (debug) {
+            Debug.Log("State Machine Initialized to " + stateName);
+        }
 
         return this;
     }
@@ -315,6 +324,9 @@ public sealed class FiniteStateMachine {
             if (!ignoreUnkownAction) {
                 throw new UnknownActionException("Unknown action " + action + " for state " + from);
             }
+            if (debug) {
+                Debug.Log("Unknown Action {action}");
+            }
 
             return this;
         }
@@ -322,6 +334,10 @@ public sealed class FiniteStateMachine {
         string goToState;
         toDictionary.TryGetValue(action, out goToState);
         setState(goToState);
+
+        if (debug) {
+            Debug.Log("Action {action} changed state to {goToState}");
+        }
 
         return this;
     }
