@@ -1,2 +1,2 @@
 # UnityFSM
-Finity State Machine for Unity
+Finite State Machine for Unity
