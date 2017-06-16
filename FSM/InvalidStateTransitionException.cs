@@ -1,12 +1,14 @@
 using System;
 
-/// <summary>
-/// An invalid state transition is requested
-/// </summary>
-public class InvalidStateTransitionException : Exception {
+namespace JordiBisbal.FSM {
     /// <summary>
-    /// Constructor
+    /// An invalid state transition is requested
     /// </summary>
-    /// <param name="message">Message</param>
-    public InvalidStateTransitionException(string message) : base(message) { }
-};
+    public class InvalidStateTransitionException : Exception {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="message">Message</param>
+        public InvalidStateTransitionException(string message) : base(message) { }
+    }
+}

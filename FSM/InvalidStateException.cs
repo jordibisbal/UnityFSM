@@ -1,12 +1,14 @@
 using System;
 
-/// <summary>
-/// An invalid state is requested
-/// </summary>
-public class InvalidStateException : Exception {
+namespace JordiBisbal.FSM {
     /// <summary>
-    /// Constructor
+    /// An invalid state is requested
     /// </summary>
-    /// <param name="message">Message</param>
-    public InvalidStateException(string message) : base(message) { }
-};
+    public class InvalidStateException : Exception {
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="message">Message</param>
+        public InvalidStateException(string message) : base(message) { }
+    }
+}
