@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace JordiBisbal.FSM {
     using EventManager;
-    using Guard = System.Func<bool>;
+    using Guard = Func<bool>;
 
     /// <summary>
     /// Fine State Machine (FSM) implementation
@@ -15,12 +15,18 @@ namespace JordiBisbal.FSM {
         /// <summary>
         /// Current state
         /// </summary>
-        public string state {
+        public State state {
             get {
                 if (myState == null) {
                     throw new InvalidStateException("The finite state machine has no state at all (null), not initialized ?");
                 }
-                return myState.name;
+                return myState;
+            }
+        }
+
+        public object stateValue {
+            get {
+                return myState.value;
             }
         }
 
@@ -193,7 +199,7 @@ namespace JordiBisbal.FSM {
         /// <param name="name">State name</param>
         /// <param name="onArrive">Callback to be called when the state is set</param>
         /// <returns>Fluent interface</returns>
-        public FiniteStateMachine addState(string name, Action onArrive = null, Action onUpdate = null) {
+        public FiniteStateMachine addState(string name, Action onArrive = null, Action onUpdate = null, Value value = null) {
 
             if (states.ContainsKey(name)) {
                 throw new StateAlreadyExistsException("State " + name + " already exists");
@@ -203,7 +209,7 @@ namespace JordiBisbal.FSM {
                 EventManager.StartListening(EventManager.update, OnUpdate);
                 subscribedToUpdate = true;
             }
-            states.Add(name, new State(name, onArrive, onUpdate));
+            states.Add(name, new State(name, onArrive, onUpdate, value));
 
             return this;
         }

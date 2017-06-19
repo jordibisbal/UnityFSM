@@ -4,7 +4,7 @@ namespace JordiBisbal.FSM {
     /// <summary>
     /// Hols an state properties
     /// </summary>
-    class State {
+    public class State {
         /// <summary>
         /// State name
         /// </summary>    
@@ -24,15 +24,21 @@ namespace JordiBisbal.FSM {
         private Action myOnUpdate;
 
         /// <summary>
+        /// A value associated with the state
+        /// </summary>
+        public Value value = null;
+
+        /// <summary>
         /// State constructor
         /// </summary>
         /// <param name="name">State name</param>
         /// <param name="onArrive">Action to we called (if any) when the machine enters this state</param>
         /// <param name="onUpdate">Action to be called (if any) on the UpdateLoop when the machine is on this state</param>
-        public State(string name, Action onArrive, Action onUpdate) {
+        public State(string name, Action onArrive, Action onUpdate, Value value = null) {
             myName = name;
             myOnArrive = onArrive;
             myOnUpdate = onUpdate;
-        }
+            this.value = value;
+        } 
     }
 }
