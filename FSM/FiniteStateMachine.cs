@@ -6,39 +6,6 @@ namespace JordiBisbal.FSM {
     using EventManager;
     using Guard = System.Func<bool>;
 
-    class State {
-        /// <summary>
-        /// State name
-        /// </summary>    
-        public string name { get { return myName; } }
-        private string myName;
-
-        /// <summary>
-        /// Action to we called (if any) when the machine enters this state
-        /// </summary>
-        public Action onArrive { get { return myOnArrive; } }
-        private Action myOnArrive;
-
-
-        /// <summary>
-        /// Action to be called (if any) on the UpdateLoop when the machine is on this state
-        /// </summary>
-        public Action onUpdate { get { return myOnUpdate; } }
-        private Action myOnUpdate;
-
-        /// <summary>
-        /// State constructor
-        /// </summary>
-        /// <param name="name">State name</param>
-        /// <param name="onArrive">Action to we called (if any) when the machine enters this state</param>
-        /// <param name="onUpdate">Action to be called (if any) on the UpdateLoop when the machine is on this state</param>
-        public State(string name, Action onArrive, Action onUpdate) {
-            this.myName = name;
-            this.myOnArrive = onArrive;
-            this.myOnUpdate = onUpdate;
-        }
-    }
-
     /// <summary>
     /// Fine State Machine (FSM) implementation
     /// Copyright 2017, Jordi Bisbal (jordi.bisbal@gmail.com)
@@ -100,8 +67,11 @@ namespace JordiBisbal.FSM {
         /// <summary>
         /// If an action in requested but the current state have no instructions for it, just ignore
         /// </summary>
-        private bool ignoreUnkownAction;
+        private bool ignoreUnkownActions = true;
 
+        /// <summary>
+        /// The FSM is subscribed to Update loop (to call callbacks on every update)
+        /// </summary>
         private bool subscribedToUpdate = false;
 
         /// <summary>
@@ -113,7 +83,7 @@ namespace JordiBisbal.FSM {
         public FiniteStateMachine(bool strictGuarding = true, bool ignoreSelfTransitions = true, bool ignoreUnknownActions = true) {
             this.strictGuarding = strictGuarding;
             this.ignoreSelfTransitions = ignoreSelfTransitions;
-            this.ignoreUnkownAction = ignoreUnknownActions;
+            this.ignoreUnkownActions = ignoreUnknownActions;
         }
 
         /// <summary>
@@ -348,7 +318,7 @@ namespace JordiBisbal.FSM {
 
             actions.TryGetValue(from, out toDictionary);
             if (!toDictionary.ContainsKey(action)) {
-                if (!ignoreUnkownAction) {
+                if (!ignoreUnkownActions) {
                     throw new UnknownActionException("Unknown action " + action + " for state " + from);
                 }
                 if (debug) {
