@@ -1,5 +1,5 @@
 namespace JordiBisbal.FSM {
-    public class IntegerValue {
+    public class IntegerValue : Value {
         private int value;
 
         /// <summary>

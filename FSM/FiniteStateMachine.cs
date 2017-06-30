@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace JordiBisbal.FSM {
     using EventManager;
+    using JordiBisba.FSM;
     using Guard = Func<bool>;
 
     /// <summary>
@@ -58,7 +59,7 @@ namespace JordiBisbal.FSM {
         /// <summary>
         /// Called when there is a state change
         /// </summary>
-        private Action onChangeAction = null;
+        private ValuedAction onChangeAction = null;
 
         /// <summary>
         /// Current state, the state
@@ -185,11 +186,11 @@ namespace JordiBisbal.FSM {
             myState = getState(newState);
 
             if (myState.onArrive != null) {
-                myState.onArrive();
+                myState.onArrive(myState);
             }
 
             if (onChangeAction != null) {
-                onChangeAction();
+                onChangeAction(myState);
             }
         }
 
@@ -198,8 +199,10 @@ namespace JordiBisbal.FSM {
         /// </summary>
         /// <param name="name">State name</param>
         /// <param name="onArrive">Callback to be called when the state is set</param>
-        /// <returns>Fluent interface</returns>
-        public FiniteStateMachine addState(string name, Action onArrive = null, Action onUpdate = null, Value value = null) {
+        /// <param name="onUpdate">Callback to be called while the state is active (on update loop)</param>
+        /// <param name="value">Initial value of the state (if any)</param>
+        /// <returns></returns>
+        public FiniteStateMachine addState(string name, ValuedAction onArrive = null, ValuedAction onUpdate = null, Value value = null) {
 
             if (states.ContainsKey(name)) {
                 throw new StateAlreadyExistsException("State " + name + " already exists");
@@ -213,6 +216,19 @@ namespace JordiBisbal.FSM {
 
             return this;
         }
+
+        /// <summary>
+        /// Adds a new state
+        /// </summary>
+        /// <param name="name">State name</param>
+        /// <param name="onArrive">Callback to be called when the state is set</param>
+        /// <param name="onUpdate">Callback to be called while the state is active (on update loop)</param>
+        /// <param name="value">Initial value of the state (if any)</param>
+        /// <returns></returns>
+        public FiniteStateMachine addState(string name, Value value) {
+            return addState(name, null, null, value);
+        }
+
 
         /// <summary>
         /// Returns the transition callback for the current transition
@@ -351,16 +367,16 @@ namespace JordiBisbal.FSM {
         /// <param name="deltaTime">The deltaTime to be passed to the delegate</param>
         public void OnUpdate(object message) {
             if (myState != null && myState.onUpdate != null) {
-                myState.onUpdate();
+                myState.onUpdate(myState);
             }
         }
 
         /// <summary>
         /// Sets the on change callback, that Action is called on every state change
-        /// </summary>    /// 
+        /// </summary>     
         /// <param name="onChange">The onChange callback Action</param>
         /// <returns></returns>
-        public FiniteStateMachine onChange(Action onChange) {
+        public FiniteStateMachine onChange(ValuedAction onChange) {
             onChangeAction = onChange;
 
             return this;

@@ -1,3 +1,4 @@
+using JordiBisba.FSM;
 using System;
 
 namespace JordiBisbal.FSM {
@@ -14,14 +15,14 @@ namespace JordiBisbal.FSM {
         /// <summary>
         /// Action to we called (if any) when the machine enters this state
         /// </summary>
-        public Action onArrive { get { return myOnArrive; } }
-        private Action myOnArrive;
+        public ValuedAction onArrive { get { return myOnArrive; } }
+        private ValuedAction myOnArrive;
 
         /// <summary>
         /// Action to be called (if any) on the UpdateLoop when the machine is on this state
         /// </summary>
-        public Action onUpdate { get { return myOnUpdate; } }
-        private Action myOnUpdate;
+        public ValuedAction onUpdate { get { return myOnUpdate; } }
+        private ValuedAction myOnUpdate;
 
         /// <summary>
         /// A value associated with the state
@@ -34,7 +35,7 @@ namespace JordiBisbal.FSM {
         /// <param name="name">State name</param>
         /// <param name="onArrive">Action to we called (if any) when the machine enters this state</param>
         /// <param name="onUpdate">Action to be called (if any) on the UpdateLoop when the machine is on this state</param>
-        public State(string name, Action onArrive, Action onUpdate, Value value = null) {
+        public State(string name, ValuedAction onArrive, ValuedAction onUpdate, Value value = null) {
             myName = name;
             myOnArrive = onArrive;
             myOnUpdate = onUpdate;
