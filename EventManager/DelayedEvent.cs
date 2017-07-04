@@ -21,8 +21,8 @@ namespace JordiBisbal.EventManager {
         /// <summary>
         /// Target of the event (if any)
         /// </summary>
-        private GameObject myTarget;
-        public GameObject target { get { return myTarget; } }
+        private Object myTarget;
+        public  Object target { get { return myTarget; } }
 
         /// <summary>
         /// When in realtimeSinceStartup time then event should be triggered
@@ -37,7 +37,7 @@ namespace JordiBisbal.EventManager {
         /// <param name="message"></param>
         /// <param name="target"></param>
         /// <param name="when"></param>
-        public DelayedEvent(string eventName, object message, GameObject target, float when) {
+        public DelayedEvent(string eventName, object message, Object target, float when) {
             this.myEventName = eventName;
             this.myMessage = message;
             this.myTarget = target;

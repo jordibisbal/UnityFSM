@@ -97,7 +97,7 @@ namespace JordiBisba.Messager {
         /// <param name="subject">Subject</param>
         /// <param name="body">Message body (request)</param>
         /// <returns></returns>
-        public static Response Message(Object subscriber, string subject, Request body) {
+        public static Response SendMessage(Object subscriber, string subject, Request body) {
             return myMessage(subscriber, subject, body, false);
         }
 
@@ -113,7 +113,6 @@ namespace JordiBisba.Messager {
         private static Response myMessage(Object subscriber, string subject, Request body, bool ignoreIfNobodyListens) {
             Messager instance = getInstance();
             string key = getGameObjectKey(subscriber);
-            string completeKey = getGameObjectKey(subscriber, subject);
 
             MessageReceiver messageReceiver = null;
 

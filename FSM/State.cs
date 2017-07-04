@@ -27,7 +27,8 @@ namespace JordiBisbal.FSM {
         /// <summary>
         /// A value associated with the state
         /// </summary>
-        public Value value = null;
+        public  Value value { get { return myValue; } }
+        private Value myValue = null;
 
         /// <summary>
         /// State constructor
@@ -36,10 +37,10 @@ namespace JordiBisbal.FSM {
         /// <param name="onArrive">Action to we called (if any) when the machine enters this state</param>
         /// <param name="onUpdate">Action to be called (if any) on the UpdateLoop when the machine is on this state</param>
         public State(string name, ValuedAction onArrive, ValuedAction onUpdate, Value value = null) {
-            myName = name;
+            myName     = name;
             myOnArrive = onArrive;
             myOnUpdate = onUpdate;
-            this.value = value;
+            myValue    = value;
         } 
     }
 }

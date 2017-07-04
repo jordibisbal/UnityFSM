@@ -3,79 +3,49 @@ using UnityEngine.Events;
 using System.Collections.Generic;
 using System.Collections;
 using System.Text.RegularExpressions;
+using System;
 
 namespace JordiBisbal.EventManager {
     /// <summary>
     /// Dispatch messages to subcribers, by broadcasting to the subscribers o by delivering just to one of them
     /// For targeted events "@", the name, and the instance id of the target is add to the  event name
     /// </summary>
-    public class EventManager : MonoBehaviour {
+    public class EventManager {
 
         /// <summary>
-        /// Messages that EventManager can send by itself
+        /// Messages that EventManager sends by itself
         /// </summary>
-        public const string update = "EventManager.update";
+        public const string update        = "EventManager.update";
         public const string allwaysUpdate = "EventManager.allwaysUpdate";
-
-        /// <summary>
-        /// Is the default one, just can be one, that uses singleton
-        /// </summary>
-        public bool defaultEventManager = true;
+        public const string log           = "EventManager.log";
 
         /// <summary>
         /// Should debug all events ?
         /// </summary>
-        public bool debugEvents = true;
+        public bool debugEvents = false;
 
         /// <summary>
         /// Stored the subcribers lists
         /// </summary>
-        private Dictionary<string, ParametrizedEvent> eventDictionary = new Dictionary<string, ParametrizedEvent>();
-
-        /// <summary>
-        /// The singleton, ie. the instance that will works as default(singleton) one
-        /// </summary>
-        private static EventManager eventManagerSingleton;
+        Dictionary<string, ParametrizedEvents> eventDictionary = new Dictionary<string, ParametrizedEvents>();
 
         /// <summary>
         /// Subscribers list
         /// </summary>
-        private Dictionary<string, ArrayList> subscribers = new Dictionary<string, ArrayList>();
+        Dictionary<string, ArrayList> subscribers = new Dictionary<string, ArrayList>();
 
         /// <summary>
         /// Delayed events
         /// </summary>
-        private ArrayList delayedEvents = new ArrayList();
+        ArrayList delayedEvents = new ArrayList();
 
         /// <summary>
-        /// Get the singleton
+        /// Return the current time (based on game start)
         /// </summary>
-        /// <param name="quiet">If we try to get the singleton and it is not already created, do not emit any error to console</param>
-        /// <returns></returns>
-        private static EventManager getSingleton(bool quiet = false) {
-            if (!eventManagerSingleton) {
-                EventManager[] eventManagers = { };
-                try {
-                    eventManagers = FindObjectsOfType(typeof(EventManager)) as EventManager[];
-                }
-                catch (System.Exception) { }
+        Func<float> timeProviderDelegate;
 
-                foreach (EventManager eventManager in eventManagers) {
-                    if (!eventManager.defaultEventManager) {
-                        continue;
-                    }
-
-                    if (eventManagerSingleton) {
-                        Debug.LogError("There must be only one default EventManger");
-                    }
-                    eventManagerSingleton = FindObjectOfType(typeof(EventManager)) as EventManager;
-                }
-
-                if (!eventManagerSingleton && !quiet) {
-                    Debug.LogError("There must be one default EventManger (in a GameObject)");
-                }
-            }
-            return eventManagerSingleton;
+        public EventManager(Func<float> timeProviderDelegate = null) {
+            this.timeProviderDelegate = timeProviderDelegate;
         }
 
         /// <summary>
@@ -86,15 +56,14 @@ namespace JordiBisbal.EventManager {
         /// <param name="eventName">Name of the event the listener will respond to</param>
         /// <param name="listener">Listener Action to catch the event</param>
         /// <param name="target">If </param>
-        public static void StartListening(Object subscriber, string eventName, UnityAction<object> listener, Object target = null) {
-            EventManager singleton = getSingleton();
+        public void StartListening(UnityEngine.Object subscriber, string eventName, UnityAction<object> listener, UnityEngine.Object target = null) {            
             string key = "" + subscriber.GetInstanceID();
-
-            if (!singleton.subscribers.ContainsKey(key)) {
-                singleton.subscribers.Add(key, new ArrayList());
+            
+            if (! subscribers.ContainsKey(key)) {
+                subscribers.Add(key, new ArrayList());
             }
             ArrayList namedEvents;
-            singleton.subscribers.TryGetValue(key, out namedEvents);
+            subscribers.TryGetValue(key, out namedEvents);
             namedEvents.Add(new OwnedListener(subscriber, listener, eventName, target));
 
             StartListening(eventName, listener, target);
@@ -108,24 +77,32 @@ namespace JordiBisbal.EventManager {
         /// <param name="eventName">The event name</param>
         /// <param name="listener">The callback to be called</param>
         /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>    
-        public static void StartListening(string eventName, UnityAction<object> listener, UnityEngine.Object target = null) {
-            ParametrizedEvent thisEvent = null;
-
+        public void StartListening(string eventName, UnityAction<object> listener, UnityEngine.Object target = null) {
+            ParametrizedEvents thisEvent = null;
+            
             assertEventNameIsValid(eventName);
 
             eventName = targetedEventName(eventName, target);
 
-            if (getSingleton().eventDictionary.TryGetValue(eventName, out thisEvent)) {
+            if (eventDictionary.TryGetValue(eventName, out thisEvent)) {
                 thisEvent.AddListener(listener);
             }
             else {
-                thisEvent = new ParametrizedEvent();
+                thisEvent = new ParametrizedEvents();
                 thisEvent.AddListener(listener);
-                getSingleton().eventDictionary.Add(eventName, thisEvent);
+                eventDictionary.Add(eventName, thisEvent);
             }
 
-            if (getSingleton().debugEvents) {
-                Debug.Log("Event listener added : " + eventName);
+            DebugEvent("Event listener added : " + eventName);
+        }
+
+        /// <summary>
+        /// Logs the event
+        /// </summary>
+        /// <param name="eventName">Message to log</param>
+        private void DebugEvent(string message) {
+            if (debugEvents) {
+                Debug.Log(message);
             }
         }
 
@@ -133,23 +110,20 @@ namespace JordiBisbal.EventManager {
         /// Unsubstibe to all events that where subscribed as subscriber
         /// </summary>
         /// <param name="subscriber"></param>
-        public static void StopListening(Object subscriber) {
+        public void StopListening(UnityEngine.Object subscriber) {
             // On stop listening it is ok to ignore if no singleton is already created as we could disable an object before the singleton is instantiated
-            if (getSingleton(true) == null) return;
-
-            EventManager singleton = getSingleton();
             string key = "" + subscriber.GetInstanceID();
 
-            if (!singleton.subscribers.ContainsKey(key)) {
+            if (!subscribers.ContainsKey(key)) {
                 return;
             }
 
             ArrayList ownedEvents;
-            singleton.subscribers.TryGetValue(key, out ownedEvents);
+            subscribers.TryGetValue(key, out ownedEvents);
             foreach (OwnedListener ownedListener in ownedEvents) {
                 StopListening(ownedListener.eventName, ownedListener.listener, ownedListener.target);
             }
-            singleton.subscribers.Remove(key);
+            subscribers.Remove(key);
         }
         /// <summary>
         /// Deataches the given listener to eventName event.
@@ -158,38 +132,23 @@ namespace JordiBisbal.EventManager {
         /// <param name="eventName">The event name</param>
         /// <param name="listener">The callback to be called</param>
         /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>    
-        public static void StopListening(string eventName, UnityAction<object> listener, Object target = null) {
-            if (singletonInitialized()) return;
-            // On stop listening it is ok to ignore if no singleton is already created as we could disable an object before the singleton is instantiated
-            if (getSingleton() == null) return;
-
+        public void StopListening(string eventName, UnityAction<object> listener, UnityEngine.Object target = null) {
             assertEventNameIsValid(eventName);
 
             eventName = targetedEventName(eventName, target);
 
-            ParametrizedEvent thisEvent = null;
-            if (getSingleton().eventDictionary.TryGetValue(eventName, out thisEvent)) {
+            ParametrizedEvents thisEvent = null;
+            if (eventDictionary.TryGetValue(eventName, out thisEvent)) {
                 thisEvent.RemoveListener(listener);
             }
-        }
-
-        /// <summary>
-        /// Returns true is the singleton has been initialized, at some points (like stopping listening) if the singleton does not in fact exists, we dont't
-        /// care as nothing has to be done
-        /// </summary>
-        /// <returns>Whatever the singleton has been initialized</returns>
-        private static bool singletonInitialized() {
-            return eventManagerSingleton == null;
         }
 
         /// <summary>
         /// Deattaches all events (targeted or not) at wich listener is attached
         /// </summary>
         /// <param name="listener"></param>
-        public static void StopListening(UnityAction<object> listener) {
-            if (eventManagerSingleton == null) return;
-
-            foreach (KeyValuePair<string, ParametrizedEvent> thisEvent in getSingleton().eventDictionary) {
+        public void StopListening(UnityAction<object> listener) {
+            foreach (KeyValuePair<string, ParametrizedEvents> thisEvent in eventDictionary) {
                 thisEvent.Value.RemoveListener(listener);
             }
         }
@@ -198,21 +157,52 @@ namespace JordiBisbal.EventManager {
         /// Sends the message to all attached listeners
         /// </summary>
         /// <param name="eventName">The event name</param>
-        /// <param name="listener">The callback to be called</param>
+        /// <param name="message">The message to be passed</param>
         /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>    
-        public static void TriggerEvent(string eventName, object message, GameObject target = null) {
+        public void TriggerEvent(string eventName, object message = null, UnityEngine.Object target = null) {
             assertEventNameIsValid(eventName);
-
-            if (getSingleton().debugEvents) {
-                Debug.Log("Event triggered : " + eventName);
-            }
 
             eventName = targetedEventName(eventName, target);
 
-            ParametrizedEvent thisEvent = null;
-            if (getSingleton().eventDictionary.TryGetValue(eventName, out thisEvent)) {
+            DebugEvent("Event triggered : " + eventName);
+
+            ParametrizedEvents thisEvent = null;
+            if (eventDictionary.TryGetValue(eventName, out thisEvent)) {
                 thisEvent.Invoke(message);
             }
+        }
+
+        /// <summary>
+        /// Counts attached listeners
+        /// </summary>
+        /// <param name="eventName">The event name</param>
+        /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>    
+        public int ListenerCount(string eventName, UnityEngine.Object target = null) {
+            assertEventNameIsValid(eventName);
+
+            eventName = targetedEventName(eventName, target);
+
+            DebugEvent("Event triggered : " + eventName);
+
+            ParametrizedEvents thisEvent = null;
+            if (eventDictionary.TryGetValue(eventName, out thisEvent)) {
+                return thisEvent.Count();
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// Counts all attached listeners
+        /// </summary>
+        public int ListenerCount() {
+            int total = 0;
+
+            foreach (ParametrizedEvents paremitrizedEvents in eventDictionary.Values) {
+                total = total + paremitrizedEvents.Count();
+            }
+
+            return total;
         }
 
         /// <summary>
@@ -222,8 +212,8 @@ namespace JordiBisbal.EventManager {
         /// <param name="eventName">The event name</param>
         /// <param name="listener">The callback to be called</param>
         /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>    
-        public static void TriggerEventAfter(float time, string eventName, object message, GameObject target = null) {
-            getSingleton().delayedEvents.Add(new DelayedEvent(eventName, message, target, Time.realtimeSinceStartup + time));
+        public void TriggerEventAfter(float time, string eventName, object message, UnityEngine.Object target = null) {
+            delayedEvents.Add(new DelayedEvent(eventName, message, target, GetTime() + time));
         }
 
         /// <summary>
@@ -232,8 +222,8 @@ namespace JordiBisbal.EventManager {
         /// <param name="eventName">The event name</param>
         /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>    
         /// <returns></returns>
-        private static string targetedEventName(string eventName, UnityEngine.Object target) {
-            if (!target) {
+        private string targetedEventName(string eventName, UnityEngine.Object target) {
+            if (target == null) {
 
                 return eventName;
             }
@@ -246,7 +236,7 @@ namespace JordiBisbal.EventManager {
         /// <param name="eventName">Event name</param>
         private static void assertEventNameIsValid(string eventName) {
             // Fucked bastards !!! Another regex dialect ? Really ??? :(
-            if (!(new Regex(@"^[\w./]+$").IsMatch(eventName))) {
+            if (!(new Regex(@"^[\w./:]+$").IsMatch(eventName))) {
                 throw new InvalidEventNameException(eventName);
             };
         }
@@ -254,21 +244,47 @@ namespace JordiBisbal.EventManager {
         /// <summary>
         /// Sends a tick messatge to listners subscribed to EventManager.update
         /// </summary>
-        private void Update() {
+        public void Update() {
             TriggerEvent(EventManager.update, null);
         }
 
         /// <summary>
-        /// Sends a tick messatge to listners subscribed to EventManager.allwaysUpdate
+        /// Sends a tick messatge to listners subscribed to EventManager.allwaysUpdate and delivers delayed events
         /// </summary>
-        private void AllwaysUpdate() {
+        public void AllwaysUpdate() {
             TriggerEvent(EventManager.allwaysUpdate, null);
+            float now = GetTime();
 
-            float now = Time.realtimeSinceStartup;
-
-            foreach (DelayedEvent theEvent in delayedEvents) {
-                if (theEvent.when >= now) {
+            for (int i = delayedEvents.Count - 1; i >= 0; i--) {
+                DelayedEvent theEvent = (DelayedEvent)delayedEvents[i];
+                if (theEvent.when <= now) {
                     TriggerEvent(theEvent.eventName, theEvent.message, theEvent.target);
+                    delayedEvents.Remove(theEvent);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Return the current time
+        /// </summary>
+        /// <returns></returns>
+        private float GetTime() {
+            if (timeProviderDelegate == null) {
+                throw new MissConfiguredException("No time provider has been setup for this eventManager");
+            }
+            float now = timeProviderDelegate();
+            return now;
+        }
+
+        /// <summary>
+        /// Remove delayed events matching eventName and target
+        /// </summary>
+        /// <param name="eventName">Event name</param>
+        /// <param name="target">Event Target</param>
+        public void FlushDelayedEvents(string eventName, GameObject target = null) {
+            for (int i = delayedEvents.Count - 1; i > 0; i--) {
+                DelayedEvent theEvent = (DelayedEvent)delayedEvents[i];
+                if ((theEvent.eventName == eventName) && (theEvent.target == target)) {
                     delayedEvents.Remove(theEvent);
                 }
             }

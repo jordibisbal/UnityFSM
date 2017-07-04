@@ -8,7 +8,7 @@ namespace JordiBisbal.FSM {
     using Guard = Func<bool>;
 
     /// <summary>
-    /// Fine State Machine (FSM) implementation
+    /// Fine State Machine (FSM, can also hold a vlue, global or for each state) implementation
     /// Copyright 2017, Jordi Bisbal (jordi.bisbal@gmail.com)
     /// </summary>
     public sealed class FiniteStateMachine {
@@ -25,9 +25,20 @@ namespace JordiBisbal.FSM {
             }
         }
 
-        public object stateValue {
+        /// <summary>
+        /// Global FSM value
+        /// </summary>
+        public Value myValue = null;
+
+        /// <summary>
+        /// Global FSM value
+        /// </summary>
+        public Value value {
             get {
-                return myState.value;
+                return myValue;
+            }
+            set {
+                myValue = value;
             }
         }
 
@@ -81,13 +92,16 @@ namespace JordiBisbal.FSM {
         /// </summary>
         private bool subscribedToUpdate = false;
 
+        private EventManager eventManager;
+
         /// <summary>
         /// Constructs the state machine.
         /// 
         /// </summary>
         /// <param name="strictGuarding">Strict guarding if true</param>
         /// <param name="ignoreSelfTransitions">Transitions from a state to the same state are ignored, no callbacks are called</param>
-        public FiniteStateMachine(bool strictGuarding = true, bool ignoreSelfTransitions = true, bool ignoreUnknownActions = true) {
+        public FiniteStateMachine(EventManager eventManager = null, bool strictGuarding = true, bool ignoreSelfTransitions = true, bool ignoreUnknownActions = true) {
+            this.eventManager = eventManager;
             this.strictGuarding = strictGuarding;
             this.ignoreSelfTransitions = ignoreSelfTransitions;
             this.ignoreUnkownActions = ignoreUnknownActions;
@@ -98,7 +112,7 @@ namespace JordiBisbal.FSM {
         /// </summary>
         ~FiniteStateMachine() {
             if (subscribedToUpdate) {
-                EventManager.StopListening(EventManager.update, OnUpdate);
+                eventManager.StopListening(EventManager.update, OnUpdate);
             }
         }
 
@@ -116,28 +130,62 @@ namespace JordiBisbal.FSM {
         /// </summary>
         /// <param name="newState"></param>
         /// <returns></returns>
-        public FiniteStateMachine initialize(string stateName) {
+        public FiniteStateMachine initialize(string stateName, Value value = null) {
             myState = getState(stateName);
             if (debug) {
                 Debug.Log("State Machine Initialized to " + stateName);
             }
 
+            this.value = value;
+
             return this;
         }
 
         /// <summary>
-        /// Asserts the given state is known, if not throws an InvalidStateException.
+        /// Returns the given state, if the given state is not known, throws an UnknownStateException.
         /// </summary>
         /// <param name="state">State to assert exists</param>
         private State getState(string stateName) {
             if (!states.ContainsKey(stateName)) {
-                throw new InvalidStateException("State " + stateName + " is not valid (unkown)");
+                throw new UnknownStateException("State " + stateName + " is unkow)");
             }
 
-            State state;
-            states.TryGetValue(stateName, out state);
+            return states[stateName];
+        }
+
+        /// <summary>
+        /// Sets the given state value, if the given state is not known, throws an UnknownStateException.
+        /// </summary>
+        /// <param name="state">State to assert exists</param>
+        public State setStateValue(string stateName, Value value) {
+            if (!states.ContainsKey(stateName)) {
+                throw new UnknownStateException("State " + stateName + " is unkown");
+            }
+
+            State state = states[stateName];
+            states[stateName] = new State(state.name, state.onArrive, state.onUpdate, value);
+
+            // Refresh current state
+            if (myState.name == stateName) {
+                myState = states[stateName];
+            }
 
             return state;
+        }
+
+        /// <summary>
+        /// Sets the given state value, if the given state is not known, throws an UnknownStateException.
+        /// </summary>
+        /// <param name="state">State to assert exists</param>
+        public State setStateValue(State state, Value value) {
+            return setStateValue(state.name, value);
+        }
+
+        /// <summary>
+        /// Sets the current state value
+        /// </summary>
+        public State setStateValue(Value value) {
+            return setStateValue(state.name, value);
         }
 
         /// <summary>
@@ -159,7 +207,7 @@ namespace JordiBisbal.FSM {
         /// </summary>
         /// <param name="newState">New state</param>
         /// <returns>Fluent interface</returns>
-        private FiniteStateMachine setState(string newState) {
+        private FiniteStateMachine setState(string newState, Value newValue) {
 
             if (ignoreSelfTransitions && newState == myState.name) {
                 return this;
@@ -169,7 +217,7 @@ namespace JordiBisbal.FSM {
             assertTransitionIsValid(myState.name, newState);
 
             // If no transitions are found, just set the state
-            checkGuardsAndSetState(newState);
+            checkGuardsAndSetState(newState, newValue);
 
             return this;
         }
@@ -180,8 +228,10 @@ namespace JordiBisbal.FSM {
         /// Guard system NOT IMPLEMENTED YET !!!
         /// </summary>
         /// <param name="newState">New statem, if no state is given (null), the new State is targetState</param>
-        private void checkGuardsAndSetState(string newState) {
+        private void checkGuardsAndSetState(string newState, Value newValue) {
             // TODO : Check transition guards
+
+            setStateValue(newState, newValue);
 
             myState = getState(newState);
 
@@ -208,13 +258,24 @@ namespace JordiBisbal.FSM {
                 throw new StateAlreadyExistsException("State " + name + " already exists");
             }
 
-            if ((onUpdate != null) && !subscribedToUpdate) {
-                EventManager.StartListening(EventManager.update, OnUpdate);
-                subscribedToUpdate = true;
-            }
+            SubscribeToUpdate(onUpdate);
             states.Add(name, new State(name, onArrive, onUpdate, value));
 
             return this;
+        }
+
+        /// <summary>
+        /// Subscribe to update events
+        /// </summary>
+        /// <param name="onUpdate"></param>
+        private void SubscribeToUpdate(ValuedAction onUpdate) {
+            if (eventManager == null) {
+                throw new ThereIsNoEVentManagerException("No event manager on this FiniteStateMachine to take care of update events");
+            }
+            if ((onUpdate != null) && !subscribedToUpdate) {
+                eventManager.StartListening(EventManager.update, OnUpdate);
+                subscribedToUpdate = true;
+            }
         }
 
         /// <summary>
@@ -328,7 +389,7 @@ namespace JordiBisbal.FSM {
         /// </summary>
         /// <param name="action">Action to perform for the current state</param>
         /// <returns></returns>
-        public FiniteStateMachine doAction(string action) {
+        public FiniteStateMachine doAction(string action, Value value = null) {
             Dictionary<string, string> toDictionary;
 
             string from = myState.name;
@@ -352,7 +413,7 @@ namespace JordiBisbal.FSM {
 
             string goToState;
             toDictionary.TryGetValue(action, out goToState);
-            setState(goToState);
+            setState(goToState, value);
 
             if (debug) {
                 Debug.Log("Action " + action + " changed state to " + goToState);

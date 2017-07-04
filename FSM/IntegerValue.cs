@@ -1,3 +1,5 @@
+using System;
+
 namespace JordiBisbal.FSM {
     public class IntegerValue : Value {
         private int value;
@@ -16,6 +18,13 @@ namespace JordiBisbal.FSM {
         /// <returns></returns>
         public int AsInt() {
             return value;
+        }
+
+        /// <summary>
+        /// Returns a new value object with the value incrmente by one
+        /// </summary>
+        internal IntegerValue Inc() {
+            return new IntegerValue(value + 1);
         }
     }
 }
