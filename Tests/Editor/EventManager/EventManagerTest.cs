@@ -5,6 +5,25 @@ using UnityEngine;
 
 public class EventManagerTest {
     [Test]
+    public void testInvalidEventNameException() {
+        InvalidEventNameException exception = Assert.Throws<InvalidEventNameException>(delegate () {
+            EventManager eventManager = new EventManager();
+            UnityAction<object> listener = message => { };
+            eventManager.StartListening("event ", listener);
+        });
+        Assert.AreEqual("Invalid event name \"event \"", exception.Message);
+    }
+
+    [Test]
+    public void testMisconfiguredException() {
+        MissConfiguredException exception = Assert.Throws<MissConfiguredException>(delegate () {
+            EventManager eventManager = new EventManager();
+            eventManager.AllwaysUpdate();
+        });
+        Assert.AreEqual("No time delegate has been provided for this eventManager", exception.Message);
+    }
+
+    [Test]
     public void testListening() {
         EventManager eventManager = new EventManager();
         UnityAction<object> listener = message => {};

@@ -3,7 +3,7 @@ namespace JordiBisbal.FSM {
     /// <summary>
     /// The action has already been defined for that state
     /// </summary>
-    public class ActionAlreadyExistsException : Exception {
+    public class ActionAlreadyExistsException : FiniteStateMachineException {
         /// <summary>
         /// Constructor
         /// </summary>

@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Runtime.Serialization;
 
 namespace JordiBisbal.EventManager {
     [Serializable]
-    internal class MissConfiguredException : Exception {
+    public class MissConfiguredException : Exception {
         public MissConfiguredException() {
         }
 

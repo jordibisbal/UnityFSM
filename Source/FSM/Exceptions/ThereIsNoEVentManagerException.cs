@@ -5,7 +5,7 @@ namespace JordiBisbal.FSM {
     /// <summary>
     /// Thrown when the FSM need an event manager, but none given
     /// </summary>
-    internal class ThereIsNoEVentManagerException : Exception {
+    public class ThereIsNoEVentManagerException : FiniteStateMachineException {
         public ThereIsNoEVentManagerException() {
         }
 

@@ -4,7 +4,7 @@ namespace JordiBisbal.FSM {
     /// <summary>
     /// An action unknown for the curremt state has been requested
     /// </summary>
-    public class UnknownActionException : Exception {
+    public class UnknownActionException : FiniteStateMachineException {
         /// <summary>
         /// Constructor
         /// </summary>

@@ -4,7 +4,7 @@ namespace JordiBisbal.FSM {
     /// <summary>
     /// An invalid state is requested
     /// </summary>
-    public class StateAlreadyExistsException : Exception {
+    public class StateAlreadyExistsException : FiniteStateMachineException {
         /// <summary>
         /// Constructor
         /// </summary>

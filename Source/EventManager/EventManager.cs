@@ -237,7 +237,7 @@ namespace JordiBisbal.EventManager {
         private static void assertEventNameIsValid(string eventName) {
             // Fucked bastards !!! Another regex dialect ? Really ??? :(
             if (!(new Regex(@"^[\w./:]+$").IsMatch(eventName))) {
-                throw new InvalidEventNameException(eventName);
+                throw new InvalidEventNameException("Invalid event name \"" + eventName + "\"");
             };
         }
 
@@ -245,14 +245,14 @@ namespace JordiBisbal.EventManager {
         /// Sends a tick messatge to listners subscribed to EventManager.update
         /// </summary>
         public void Update() {
-            TriggerEvent(EventManager.update, null);
+            TriggerEvent(update, null);
         }
 
         /// <summary>
         /// Sends a tick messatge to listners subscribed to EventManager.allwaysUpdate and delivers delayed events
         /// </summary>
         public void AllwaysUpdate() {
-            TriggerEvent(EventManager.allwaysUpdate, null);
+            TriggerEvent(allwaysUpdate, null);
             float now = GetTime();
 
             for (int i = delayedEvents.Count - 1; i >= 0; i--) {
@@ -270,7 +270,7 @@ namespace JordiBisbal.EventManager {
         /// <returns></returns>
         private float GetTime() {
             if (timeProviderDelegate == null) {
-                throw new MissConfiguredException("No time provider has been setup for this eventManager");
+                throw new MissConfiguredException("No time delegate has been provided for this eventManager");
             }
             float now = timeProviderDelegate();
             return now;

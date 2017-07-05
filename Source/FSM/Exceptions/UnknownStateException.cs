@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Runtime.Serialization;
 
 namespace JordiBisbal.FSM {
     [Serializable]
-    internal class UnknownStateException : Exception {
+    public class UnknownStateException : FiniteStateMachineException {
         public UnknownStateException() {
         }
 
