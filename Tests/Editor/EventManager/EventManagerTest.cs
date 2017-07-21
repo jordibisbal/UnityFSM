@@ -9,7 +9,7 @@ public class EventManagerTest {
         InvalidEventNameException exception = Assert.Throws<InvalidEventNameException>(delegate () {
             EventManager eventManager = new EventManager();
             UnityAction<object> listener = message => { };
-            eventManager.StartListening("event ", listener);
+            eventManager.StartListening("event ", listener);            
         });
         Assert.AreEqual("Invalid event name \"event \"", exception.Message);
     }

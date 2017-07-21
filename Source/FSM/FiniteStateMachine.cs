@@ -19,7 +19,7 @@ namespace JordiBisbal.FSM {
         public State state {
             get {
                 if (myState == null) {
-                    throw new InvalidStateException("The finite state machine has no state at all (null), not initialized ?");
+                    throw new UninitializedStateException("The finite state machine is uninitialized");
                 }
                 return myState;
             }
@@ -92,6 +92,9 @@ namespace JordiBisbal.FSM {
         /// </summary>
         private bool subscribedToUpdate = false;
 
+        /// <summary>
+        /// Event manager (to subscribe to updates/allwaysUpdates)
+        /// </summary>
         private EventManager eventManager;
 
         /// <summary>
@@ -121,11 +124,19 @@ namespace JordiBisbal.FSM {
         /// </summary>
         /// <param name="stateName"></param>
         /// <returns></returns>
-        public bool IsState(string stateName) {   
+        public bool IsState(string stateName) {
+            AssertIsInitialized();
+            return (myState.name == stateName);
+        }
+
+
+        /// <summary>
+        /// Throws an exception is the FinateStateMachine has not been initialized
+        /// </summary>
+        private void AssertIsInitialized() {
             if (myState == null) {
                 throw new UninitializedFiniteStateMachineException("The FiniteStateMachine has not been initialized yet");
-            }         
-            return (myState.name == stateName);
+            }
         }
 
         /// <summary>
@@ -152,11 +163,15 @@ namespace JordiBisbal.FSM {
         /// </summary>
         /// <param name="state">State to assert exists</param>
         private State GetState(string stateName) {
+            AssertStateExists(stateName);
+
+            return states[stateName];
+        }
+
+        private void AssertStateExists(string stateName) {
             if (!states.ContainsKey(stateName)) {
                 throw new UnknownStateException("State \"" + stateName + "\" is unknown");
             }
-
-            return states[stateName];
         }
 
         /// <summary>
@@ -191,17 +206,6 @@ namespace JordiBisbal.FSM {
         }
 
         /// <summary>
-        /// Asserts the given state is known, if not throws an InvalidStateException.
-        /// </summary>
-        /// <param name="sourceState">Source state</param>
-        /// <param name="targetState">Target state</param>
-        private void assertTransitionIsValid(string sourceState, string targetState) {
-            if (!isTransitionValid(sourceState, targetState)) {
-                throw new InvalidStateTransitionException("Transition from " + sourceState + " to " + targetState + " is not valid");
-            }
-        }
-
-        /// <summary>
         /// Tries to change the state to New State.
         /// 
         /// If no state set, no transition is need, no guards apply, just apply.
@@ -214,10 +218,7 @@ namespace JordiBisbal.FSM {
             if (ignoreSelfTransitions && newState == myState.name) {
                 return this;
             }
-
-            // Asserts the current transition is defined
-            assertTransitionIsValid(myState.name, newState);
-
+            
             // If no transitions are found, just set the state
             checkGuardsAndSetState(newState, newValue);
 
@@ -289,7 +290,7 @@ namespace JordiBisbal.FSM {
         /// <param name="onUpdate">Callback to be called while the state is active (on update loop)</param>
         /// <param name="value">Initial value of the state (if any)</param>
         /// <returns></returns>
-        public FiniteStateMachine addState(string name, Value value) {
+        public FiniteStateMachine AddState(string name, Value value) {
             return AddState(name, null, null, value);
         }
 
@@ -302,7 +303,6 @@ namespace JordiBisbal.FSM {
         /// <returns>The transition</returns>
         private Guard getTransitionGuard(string from, string to) {
 
-            assertTransitionIsValid(from, to);
             Dictionary<string, Guard> fromCollection;
             transitions.TryGetValue(from, out fromCollection);
             Guard guard;
@@ -334,9 +334,8 @@ namespace JordiBisbal.FSM {
         /// <param name="to">Target state</param>
         /// <param name="guard">Guard for this transition, if null, no guard is set, if on strict transition, the transition will be denied (will throw
         /// an InvalidStateTransitionException</param>
-        /// <param name="transition">Callback to be called on every update call, if null, the transition will ocurr inmediatly</param>
         /// <returns>Fluid interface</returns>
-        public FiniteStateMachine addTransition(string from, string to, Guard guard = null) {
+        public FiniteStateMachine AddTransition(string from, string to, Guard guard = null) {
 
             Dictionary<string, Guard> toDictionary;
 
@@ -347,7 +346,7 @@ namespace JordiBisbal.FSM {
 
             transitions.TryGetValue(from, out toDictionary);
             if (toDictionary.ContainsKey(to)) {
-                throw new InvalidStateTransitionException("Transition from " + from + " to " + to + " already defined");
+                throw new StateTransitionAlreadyDefinedException("Transition from \"" + from + "\" to \"" + to + "\" already defined");
             }
             toDictionary.Add(to, guard);
 
@@ -367,9 +366,12 @@ namespace JordiBisbal.FSM {
 
             Dictionary<string, string> toDictionary;
 
+            AssertStateExists(from);
+            AssertStateExists(goToState);
+
             // Autogenerates transition
             if (!isTransitionValid(from, goToState)) {
-                addTransition(from, goToState, () => true);
+                AddTransition(from, goToState, () => true);
             }
 
             if (!actions.ContainsKey(from)) {
@@ -379,7 +381,7 @@ namespace JordiBisbal.FSM {
 
             actions.TryGetValue(from, out toDictionary);
             if (toDictionary.ContainsKey(action)) {
-                throw new ActionAlreadyExistsException("Action " + action + " for state " + from + " has already been defined");
+                throw new ActionAlreadyExistsException("Action \"" + action + "\" for \"" + from + "\" state has already been defined");
             }
             toDictionary.Add(action, goToState);
 
@@ -395,6 +397,8 @@ namespace JordiBisbal.FSM {
         public FiniteStateMachine DoAction(string action, Value value = null) {
             Dictionary<string, string> toDictionary;
 
+            AssertIsInitialized();
+
             string from = myState.name;
 
             if (!actions.ContainsKey(from)) {
@@ -403,9 +407,12 @@ namespace JordiBisbal.FSM {
             }
 
             actions.TryGetValue(from, out toDictionary);
+            if (toDictionary == null) {
+                throw new UnknownStateException("Unknow state \"" + from + "\"");
+            }
             if (!toDictionary.ContainsKey(action)) {
                 if (!ignoreUnkownActions) {
-                    throw new UnknownActionException("Unknown action " + action + " for state " + from);
+                    throw new UnknownActionException("Unknown action \"" + action + "\" for state \"" + from + "\"");
                 }
                 if (debug) {
                     Debug.Log("Unknown Action " + action);
@@ -440,7 +447,7 @@ namespace JordiBisbal.FSM {
         /// </summary>     
         /// <param name="onChange">The onChange callback Action</param>
         /// <returns></returns>
-        public FiniteStateMachine onChange(ValuedAction onChange) {
+        public FiniteStateMachine SetOnChange(ValuedAction onChange) {
             onChangeAction = onChange;
 
             return this;

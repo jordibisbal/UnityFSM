@@ -10,19 +10,24 @@ namespace JordiBisbal.EventManager {
     /// Dispatch messages to subcribers, by broadcasting to the subscribers o by delivering just to one of them
     /// For targeted events "@", the name, and the instance id of the target is add to the  event name
     /// </summary>
-    public class EventManager {
+    public class EventManager : EventManagerInterface {
 
         /// <summary>
         /// Messages that EventManager sends by itself
         /// </summary>
-        public const string update        = "EventManager.update";
+        public const string update = "EventManager.update";
         public const string allwaysUpdate = "EventManager.allwaysUpdate";
-        public const string log           = "EventManager.log";
+        public const string log = "EventManager.log";
 
         /// <summary>
         /// Should debug all events ?
         /// </summary>
-        public bool debugEvents = false;
+        public bool myDebugEvents = false;
+
+        /// <summary>
+        /// Should debug all events ?
+        /// </summary>
+        public bool debugEvents { get { return myDebugEvents; } set { myDebugEvents = value; } }
 
         /// <summary>
         /// Stored the subcribers lists
@@ -84,14 +89,11 @@ namespace JordiBisbal.EventManager {
 
             eventName = targetedEventName(eventName, target);
 
-            if (eventDictionary.TryGetValue(eventName, out thisEvent)) {
-                thisEvent.AddListener(listener);
-            }
-            else {
-                thisEvent = new ParametrizedEvents();
-                thisEvent.AddListener(listener);
+            if (! eventDictionary.TryGetValue(eventName, out thisEvent)) {
+                thisEvent = new ParametrizedEvents();                
                 eventDictionary.Add(eventName, thisEvent);
             }
+            thisEvent.AddListener(listener);
 
             DebugEvent("Event listener added : " + eventName);
         }
@@ -101,7 +103,7 @@ namespace JordiBisbal.EventManager {
         /// </summary>
         /// <param name="eventName">Message to log</param>
         private void DebugEvent(string message) {
-            if (debugEvents) {
+            if (myDebugEvents) {
                 Debug.Log(message);
             }
         }

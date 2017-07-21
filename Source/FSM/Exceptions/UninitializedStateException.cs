@@ -4,11 +4,11 @@ namespace JordiBisbal.FSM {
     /// <summary>
     /// An invalid state is requested
     /// </summary>
-    public class InvalidStateException : FiniteStateMachineException {
+    public class UninitializedStateException : FiniteStateMachineException {
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="message">Message</param>
-        public InvalidStateException(string message) : base(message) { }
+        public UninitializedStateException(string message) : base(message) { }
     }
 }
