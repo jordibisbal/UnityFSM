@@ -1,6 +1,6 @@
 using JordiBisbal.FSM;
 
-namespace JordiBisba.FSM {
+namespace JordiBisbal.FSM {
     /// <summary>
     /// Delegate to receive state update
     /// </summary>

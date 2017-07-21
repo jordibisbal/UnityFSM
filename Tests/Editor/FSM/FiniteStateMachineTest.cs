@@ -1,8 +1,5 @@
 using NUnit.Framework;
-using UnityEngine.Events;
-using UnityEngine;
 using JordiBisbal.FSM;
-using JordiBisba.FSM;
 using JordiBisbal.EventManager;
 
 public class FiniteStateMachineTest {

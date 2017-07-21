@@ -1,6 +1,3 @@
-using JordiBisba.FSM;
-using System;
-
 namespace JordiBisbal.FSM {
     /// <summary>
     /// Hols an state properties

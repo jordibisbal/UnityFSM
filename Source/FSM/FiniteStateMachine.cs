@@ -4,14 +4,13 @@ using UnityEngine;
 
 namespace JordiBisbal.FSM {
     using EventManager;
-    using JordiBisba.FSM;
     using Guard = Func<bool>;
 
     /// <summary>
     /// Fine State Machine (FSM, can also hold a vlue, global or for each state) implementation
     /// Copyright 2017, Jordi Bisbal (jordi.bisbal@gmail.com)
     /// </summary>
-    public sealed class FiniteStateMachine {
+    public class FiniteStateMachine {
 
         /// <summary>
         /// Current state
@@ -95,7 +94,7 @@ namespace JordiBisbal.FSM {
         /// <summary>
         /// Event manager (to subscribe to updates/allwaysUpdates)
         /// </summary>
-        private EventManager eventManager;
+        private EventManagerInterface eventManager;
 
         /// <summary>
         /// Constructs the state machine.
@@ -103,7 +102,7 @@ namespace JordiBisbal.FSM {
         /// </summary>
         /// <param name="strictGuarding">Strict guarding if true</param>
         /// <param name="ignoreSelfTransitions">Transitions from a state to the same state are ignored, no callbacks are called</param>
-        public FiniteStateMachine(EventManager eventManager = null, bool strictGuarding = true, bool ignoreSelfTransitions = true, bool ignoreUnknownActions = true) {
+        public FiniteStateMachine(EventManagerInterface eventManager = null, bool strictGuarding = true, bool ignoreSelfTransitions = true, bool ignoreUnknownActions = true) {
             this.eventManager = eventManager;
             this.strictGuarding = strictGuarding;
             this.ignoreSelfTransitions = ignoreSelfTransitions;
