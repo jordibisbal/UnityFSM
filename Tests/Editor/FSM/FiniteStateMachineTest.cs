@@ -165,9 +165,8 @@ public class FiniteStateMachineTest {
 
     [Test]
     public void testChangeState() {
-        FiniteStateMachine stateMachine = new FiniteStateMachine();
-        string value = "no";
-        ValuedAction onArrive = (State state) => { value = "yes"; };
+        FiniteStateMachine stateMachine = new FiniteStateMachine();        
+        ValuedAction onArrive = (State state) => { };
         stateMachine
             .AddState("state")
             .AddState("state2", onArrive)

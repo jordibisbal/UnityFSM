@@ -215,7 +215,8 @@ namespace JordiBisbal.FSM {
         private FiniteStateMachine setState(string newState, Value newValue) {
 
             if (ignoreSelfTransitions && newState == myState.name) {
-                return this;
+                
+                return this;                
             }
             
             // If no transitions are found, just set the state
@@ -235,7 +236,10 @@ namespace JordiBisbal.FSM {
 
             setStateValue(newState, newValue);
 
+            Debug.Log(myState.name + " -> " + newState);
+
             myState = GetState(newState);
+            
 
             if (myState.onArrive != null) {
                 myState.onArrive(myState);
@@ -414,7 +418,7 @@ namespace JordiBisbal.FSM {
                     throw new UnknownActionException("Unknown action \"" + action + "\" for state \"" + from + "\"");
                 }
                 if (debug) {
-                    Debug.Log("Unknown Action " + action);
+                    // Debug.Log("Unknown Action " + action);
                 }
 
                 return this;

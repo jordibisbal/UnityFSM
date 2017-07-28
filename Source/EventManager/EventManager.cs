@@ -15,9 +15,9 @@ namespace JordiBisbal.EventManager {
         /// <summary>
         /// Messages that EventManager sends by itself
         /// </summary>
-        public const string update = "EventManager.update";
+        public const string update        = "EventManager.update";
         public const string allwaysUpdate = "EventManager.allwaysUpdate";
-        public const string log = "EventManager.log";
+        public const string log           = "EventManager.log";
 
         /// <summary>
         /// Should debug all events ?
@@ -238,7 +238,7 @@ namespace JordiBisbal.EventManager {
         /// <param name="eventName">Event name</param>
         private static void assertEventNameIsValid(string eventName) {
             // Fucked bastards !!! Another regex dialect ? Really ??? :(
-            if (!(new Regex(@"^[\w./:]+$").IsMatch(eventName))) {
+            if (!(new Regex(@"^[\w./:+]+$").IsMatch(eventName))) {
                 throw new InvalidEventNameException("Invalid event name \"" + eventName + "\"");
             };
         }
@@ -290,6 +290,78 @@ namespace JordiBisbal.EventManager {
                     delayedEvents.Remove(theEvent);
                 }
             }
+        }
+
+        /// <summary>
+        /// Translates an enum value to be used as event name
+        /// </summary>
+        /// <param name="value">Enum value to translate</param>
+        /// <returns>The enum translated value</returns>
+        private static string EnumToString(Enum value) {
+            return value.GetType().FullName + ":" + (Enum.GetName(value.GetType(), value));
+        }
+
+        /// <summary>
+        /// Subscribe a given object to an event, either for targeted or not events, the even if subscribed as subscriber so all
+        /// event subscribed this way, can be freed by just calling to StopListering(subscriber)
+        /// </summary>
+        /// <param name="subscriber">Object the event system will use the instance Id to subscribe, this will be used when unsubscribing</param>
+        /// <param name="eventName">Enum to use as event name</param>
+        /// <param name="listener">Listener Action to catch the event</param>
+        /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event </param>
+        public void StartListening(UnityEngine.Object subscriber, Enum eventName, UnityAction<object> listener, UnityEngine.Object target = null) {
+            StartListening(subscriber, EnumToString(eventName), listener, target);
+        }
+
+        /// <summary>
+        /// Attaches a callback to eventName, ei. starts listening for eventName.
+        /// If a target is specified, then just targeted events will be received, if no target is specified, targeted events will not be attached (received)
+        /// To free the event registration, StopListering(eventName, listener) must be called, ie. the unsubcription needs booth the event name and the callback to be done
+        /// </summary>
+        /// <param name="eventName">The event name</param>
+        /// <param name="listener">The callback to be called</param>
+        /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>
+        public void StartListening(Enum eventName, UnityAction<object> listener, UnityEngine.Object target = null) {
+            StartListening(EnumToString(eventName), listener, target);
+        }
+
+        /// <summary>
+        /// Sends the message to all attached listeners
+        /// </summary>
+        /// <param name="eventName">The enum to use as event name</param>
+        /// <param name="message">The message to be passed</param>
+        /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param>  
+        public void TriggerEvent(Enum eventName, object message = null, UnityEngine.Object target = null) {
+            TriggerEvent(EnumToString(eventName), message, target);
+        }
+
+        /// <summary>
+        /// Counts attached listeners
+        /// </summary>
+        /// <param name="eventName">The enum to use as event name</param>
+        /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param> 
+        public int ListenerCount(Enum eventName, UnityEngine.Object target = null) {
+            return ListenerCount(EnumToString(eventName), target);
+        }
+
+        /// <summary>
+        /// Sends a message after some amount of time, that is done on allwaysUpdate loop, so the precision is the one of that. 
+        /// </summary>
+        /// <param name="time">Sends the message after time seconds</param>
+        /// <param name="eventName">The enum to use as event name</param>
+        /// <param name="listener">The callback to be called</param>
+        /// <param name="target">If set, the listener will reveice the event only when target is specified on triggering the event</param> 
+        public void TriggerEventAfter(float time, Enum eventName, object message, UnityEngine.Object target = null) {
+            TriggerEventAfter(time, EnumToString(eventName), message, target);
+        }
+
+        /// <summary>
+        /// Remove delayed events matching eventName and target
+        /// </summary>
+        /// <param name="eventName">Enum to use as event name</param>
+        /// <param name="target">Event Target</param>
+        public void FlushDelayedEvents(Enum eventName, GameObject target = null) {
+            FlushDelayedEvents(EnumToString(eventName), target);
         }
     }
 }

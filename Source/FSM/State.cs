@@ -1,6 +1,6 @@
 namespace JordiBisbal.FSM {
     /// <summary>
-    /// Hols an state properties
+    /// Holds an state's properties
     /// </summary>
     public class State {
         /// <summary>
